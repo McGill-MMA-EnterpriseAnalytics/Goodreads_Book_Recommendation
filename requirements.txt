@@ -6,3 +6,8 @@ plotly
 tqdm
 ipykernel
 scikit-learn
+requests
+bs4
+asyncio
+aiohttp
+nest_asyncio
