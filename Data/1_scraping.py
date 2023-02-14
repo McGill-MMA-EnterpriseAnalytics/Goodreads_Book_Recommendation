@@ -69,6 +69,7 @@ async def async_downloader(downloader: function, task_list: list) -> tuple(list,
         (1) Results - results list
         (2) Failed Tasks - a subset from initial task list indicating
             which tasks failed'''
+
     async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=60*60*24)) as session:
 
         # Initializes tasks
@@ -116,14 +117,12 @@ async def get_user_list(session, task_data):
 
             # Parse
             tab = soup.find("table", {"class": "tableList"})
-            if tab is None:
-                return (True, [])
             results = []
             trs = tab.find_all('tr')
             for t in trs:
                 s = t.find_all('td')[1].find('a', href=True)['href']
                 user_id = re.findall(r'\d+', s)[0]
-                results.append(user_id)
+                results.append((user_id, task_data[1]))
 
             # Results
             return (True, results)
@@ -133,7 +132,7 @@ async def get_user_list(session, task_data):
 user_types = ['https://www.goodreads.com/user/best_reviewers',
               'https://www.goodreads.com/user/top_reviewers',
               'https://www.goodreads.com/user/top_readers']
-user_countries = ['?country=CA', '?country=all', '?country=US', '?country=US', '?country=AU',
+user_countries = ['?country=CA', '?country=US', '?country=US', '?country=AU',
                   '?country=SC', '?country=NZ', '?country=IE', '?country=GB',
                   '?country=SG', '?country=GB', '?country=DO', '?country=TT',
                   '?country=MT', '?country=BB', '?country=LC', '?country=GY']
@@ -149,10 +148,10 @@ while True:
     if len(user_list_fail) == failed:
         break
     failed = len(user_list_fail)
-user_list = list(set(user_list))
+# user_list = list(set(user_list))
 
 
-# GET USER DETAILS
+# %% GET USER DETAILS
 async def get_user_detail(session, task_data):
     '''Downloads a list of user
 
@@ -211,30 +210,31 @@ async def get_user_detail(session, task_data):
                 - if sucessful returns list of data points
                 - if not sucessful returns failed task data '''
 
+
 async def get_user_review_pages(session, task):
     async with session.get("https://www.goodreads.com/review/list/"+task,
-                                 params=params, cookies=cookies, headers=headers) as response:
-        try: 
+                           params=params, cookies=cookies, headers=headers) as response:
+        try:
             ur_page = await response.text()
             ur_soup = BeautifulSoup(ur_page, 'html.parser')
             review_pages = int(ur_soup.find(id='reviewPagination').find_all("a")[-2].text)
             if review_pages > 5:
                 check_pages = np.random.choice(review_pages, replace=False, size=5)
-            else: 
+            else:
                 check_pages = [i for i in range(review_pages)]
 
             new_urls = []
             for p in check_pages:
-                new_urls.append((f"https://www.goodreads.com/review/list/{task}?page={p+1}",task))
+                new_urls.append((f"https://www.goodreads.com/review/list/{task}?page={p+1}", task))
             results.extend(new_urls)
             return (True, results)
-        
-     
+
         except Exception as e:
             return (False, task)
-    
+
+
 async def download_comments(task_data):
-    async with aiohttp.ClientSession(timeout = aiohttp.ClientTimeout(total=60*60*24)) as session:
+    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=60*60*24)) as session:
         tasks = []
         for task in task_data:
             tasks.append(asyncio.ensure_future(get_user_review_pages(session, task_data)))
@@ -245,7 +245,7 @@ async def download_comments(task_data):
             if f_user != "":
                 failed_users_res.append(f_user)
 
-        return(failed_users_res)
+        return (failed_users_res)
 
 results = []
 failed_users = asyncio.run(download_comments())
@@ -278,20 +278,21 @@ async def get_user_read_books(session, url, user):
 
             # SAVE
             books = books.find_all('tr')
-            for b in books: 
-                book_link = b.find('a',href = True)['href']
-                user_read.append((book_link,user))
+            for b in books:
+                book_link = b.find('a', href=True)['href']
+                user_read.append((book_link, user))
             read_history.extend(user_read)
 
-            return(True, read_history)
+            return (True, read_history)
 
     except Exception as e:
         # Handle the exception and log it
         # print(f"Error occured while fetching data from {url}: {e}")
-        return(False, url, user)
+        return (False, url, user)
+
 
 async def get_read_books(urls_to_view):
-    async with aiohttp.ClientSession(trust_env=True,timeout=aiohttp.ClientTimeout(total=60*60*24)) as session:
+    async with aiohttp.ClientSession(trust_env=True, timeout=aiohttp.ClientTimeout(total=60*60*24)) as session:
 
         tasks = []
         for rev_url, user in urls_to_view:
@@ -299,18 +300,18 @@ async def get_read_books(urls_to_view):
 
         # failed_urls = await asyncio.gather(*tasks)
         failed_urls = await tqdm.asyncio.tqdm_asyncio.gather(*tasks)
-        
+
         failed_urls_return = []
         for url in failed_urls:
             if url != []:
                 failed_urls_return.append(url)
 
-        return(failed_urls_return)
+        return (failed_urls_return)
 
 tot_count = 0
 read_history = []
 while len(review_urls) > 0:
-    prev_len = len(review_urls) 
+    prev_len = len(review_urls)
     review_urls = asyncio.run(get_read_books(review_urls))
     print(len(review_urls))
 
@@ -320,7 +321,6 @@ while len(review_urls) > 0:
         break
 
 
-
 async def get_books(session, url):
     url = 'https://www.goodreads.com' + url
     try:
@@ -333,108 +333,97 @@ async def get_books(session, url):
             award = []
             isbn = []
 
-    
             pages_divs = ur_soup.find_all("p", {"data-testid": "pagesFormat"})
             if pages_divs == None:
                 return url
             book_pages = pages_divs[0].text
-            
+
             num_of_rating_divs = ur_soup.find_all("span", {"data-testid": "ratingsCount"})
             if num_of_rating_divs == None:
                 return url
-            num_of_rating = re.findall(r'\d+',num_of_rating_divs[0].text)[0]
-            
-            
+            num_of_rating = re.findall(r'\d+', num_of_rating_divs[0].text)[0]
+
             num_of_review_divs = ur_soup.find_all("span", {"data-testid": "reviewsCount"})
             if num_of_review_divs == None:
                 return url
-            num_of_review = re.findall(r'\d+',num_of_review_divs[0].text)[0]
-            
-
+            num_of_review = re.findall(r'\d+', num_of_review_divs[0].text)[0]
 
             genre_divs = ur_soup.find_all("a", {"class": "Button Button--tag-inline Button--small"})
             if genre_divs == None:
                 return url
             genre = genre_divs[1].text
 
-
-            publish_divs = ur_soup.find_all("p", {"data-testid":"publicationInfo"})
+            publish_divs = ur_soup.find_all("p", {"data-testid": "publicationInfo"})
             if publish_divs == None:
                 return url
             publish = publish_divs[0].text
 
-            author_divs = ur_soup.find_all("span",{"class":"ContributorLink__name"})
+            author_divs = ur_soup.find_all("span", {"class": "ContributorLink__name"})
             if author_divs == None:
                 return url
             author = author_divs[0].text
-
-
 
             title_divs = ur_soup.find_all("h1", {"class": "Text Text__title1"})
             if title_divs == None:
                 return url
             title = title_divs[0].text
 
-
             rating_divs = ur_soup.find_all("div", {"class": "RatingStatistics__rating"})
             if rating_divs == None:
                 return url
             rating = rating_divs[0].text
 
-
-            json_str = ur_soup.find_all("script",{'type':'application/ld+json'})[0].string
+            json_str = ur_soup.find_all("script", {'type': 'application/ld+json'})[0].string
             if json_str == None:
                 return url
             data = json.loads(json_str)
 
-
             if 'awards' in data.keys():
                 award.append(1)
-            else :
+            else:
                 award.append(0)
 
             if 'isbn' in data.keys():
                 isbn.append(data.get("isbn"))
-            else :
+            else:
                 isbn.append('NA')
-
 
             description_divs = ur_soup.find_all("span", {"class": "Formatted"})
             try:
                 description = description_divs[0].text
             except IndexError:
                 description = "Nil"
-            
+
             book_info.append((url, book_pages, num_of_rating, num_of_review,
-                              genre, publish, author, title, rating, 
+                              genre, publish, author, title, rating,
                               award, isbn))
             all_books.extend(book_info)
 
             # Finalize
             # print(f"READ", end=' ')
-            return([])
+            return ([])
 
     except Exception as e:
         # Handle the exception and log it
         # print(f"Error occured while fetching data from {url}: {e}")
-        return([url])
-    
+        return ([url])
+
 
 async def get_books_async(urls_to_view):
-    async with aiohttp.ClientSession(trust_env=True,timeout=aiohttp.ClientTimeout(total=60*60*24)) as session:
+    async with aiohttp.ClientSession(trust_env=True, timeout=aiohttp.ClientTimeout(total=60*60*24)) as session:
 
         tasks = []
         for rev_url in urls_to_view:
             tasks.append(asyncio.ensure_future(get_books(session, rev_url)))
 
         failed_urls = await tqdm.asyncio.tqdm_asyncio.gather(*tasks)
-        
+
         failed_urls_return = []
         for url in failed_urls:
-            if url != []:   
+            if url != []:
                 failed_urls_return.extend(url)
 
-        return(failed_urls_return)
+        return (failed_urls_return)
 
 
 all_books = []
@@ -444,11 +433,9 @@ while len(books) > 0:
 
     if init_len == len(books):
         break
-        
-    
 
 
-# GET BOOK INFORMATION 
+# GET BOOK INFORMATION
 async def get_books(session, url):
     url = 'https://www.goodreads.com' + url
     try:
@@ -457,105 +444,92 @@ async def get_books(session, url):
             ur_soup = BeautifulSoup(ur_page, 'html.parser')
             book_info = []
 
-          
-
             # Find book information
             award = []
             isbn = []
 
             pages_divs = ur_soup.find_all("p", {"data-testid": "pagesFormat"})
             book_pages = pages_divs[0].text
-                        
+
             num_of_rating_divs = ur_soup.find_all("span", {"data-testid": "ratingsCount"})
-            num_of_rating = (','.join(re.findall(r'\d+',num_of_rating_divs[0].text)))
-                        
-                        
+            num_of_rating = (','.join(re.findall(r'\d+', num_of_rating_divs[0].text)))
+
             num_of_review_divs = ur_soup.find_all("span", {"data-testid": "reviewsCount"})
-            num_of_review = (','.join(re.findall(r'\d+',num_of_review_divs[0].text)[0]))
-            
+            num_of_review = (','.join(re.findall(r'\d+', num_of_review_divs[0].text)[0]))
 
             genres = set()
             genre_divs = ur_soup.find_all("a", {"class": "Button Button--tag-inline Button--small"})
-            for genre in genre_divs[0:6]: 
+            for genre in genre_divs[0:6]:
                 genres.add(genre.text.lower())
 
-
-
-            publish_divs = ur_soup.find_all("p", {"data-testid":"publicationInfo"})
+            publish_divs = ur_soup.find_all("p", {"data-testid": "publicationInfo"})
             publish = publish_divs[0].text
 
             authors = set()
-            author_divs = ur_soup.find_all("div",{"class":"ContributorLinksList"})
+            author_divs = ur_soup.find_all("div", {"class": "ContributorLinksList"})
             for author in author_divs[0].find_all('a', class_='ContributorLink'):
-                #print(author.find_all("span",{"data-testid":"role"},{"class":"ContributorLink__role"}))
-                print(author.find("span",{"class":"ContributorLink__name"}))
-                print(author.find("span",{"data-testid":"role"},{"class":"ContributorLink__role"}))
+                # print(author.find_all("span",{"data-testid":"role"},{"class":"ContributorLink__role"}))
+                print(author.find("span", {"class": "ContributorLink__name"}))
+                print(author.find("span", {"data-testid": "role"}, {"class": "ContributorLink__role"}))
 
-                if author.find("span",{"data-testid":"role"},{"class":"ContributorLink__role"}) == None:
-                    authors.add(author.find("span",{"class":"ContributorLink__name"}).text)
-  
-  
- 
+                if author.find("span", {"data-testid": "role"}, {"class": "ContributorLink__role"}) == None:
+                    authors.add(author.find("span", {"class": "ContributorLink__name"}).text)
 
             title_divs = ur_soup.find_all("h1", {"class": "Text Text__title1"})
             title = title_divs[0].text
 
-
             rating_divs = ur_soup.find_all("div", {"class": "RatingStatistics__rating"})
             rating = rating_divs[0].text
 
-
-            json_str = ur_soup.find_all("script",{'type':'application/ld+json'})[0].string
+            json_str = ur_soup.find_all("script", {'type': 'application/ld+json'})[0].string
             data = json.loads(json_str)
-
 
             if 'awards' in data.keys():
                 award.append(1)
-            else :
+            else:
                 award.append(0)
 
             if 'isbn' in data.keys():
                 isbn.append(data.get("isbn"))
-            else :
+            else:
                 isbn.append('NA')
-
 
             description_divs = ur_soup.find_all("span", {"class": "Formatted"})
             try:
                 description = description_divs[0].text
             except IndexError:
                 description = "Nil"
-        
+
             book_info.append((url, book_pages, num_of_rating, num_of_review,
-                            genres, publish, authors, title, rating, 
-                            award, isbn))
+                              genres, publish, authors, title, rating,
+                              award, isbn))
             all_books.extend(book_info)
 
             # Finalize
             # print(f"READ", end=' ')
-            return([])
+            return ([])
 
     except Exception as e:
         # Handle the exception and log it
         # print(f"Error occured while fetching data from {url}: {e}")
-        return([url])
-    
+        return ([url])
+
 
 async def get_books_async(urls_to_view):
-    async with aiohttp.ClientSession(trust_env=True,timeout=aiohttp.ClientTimeout(total=60*60*24)) as session:
+    async with aiohttp.ClientSession(trust_env=True, timeout=aiohttp.ClientTimeout(total=60*60*24)) as session:
 
         tasks = []
         for rev_url in urls_to_view:
             tasks.append(asyncio.ensure_future(get_books(session, rev_url)))
 
         failed_urls = await tqdm.asyncio.tqdm_asyncio.gather(*tasks)
-        
+
         failed_urls_return = []
         for url in failed_urls:
-            if url != []:   
+            if url != []:
                 failed_urls_return.extend(url)
 
-        return(failed_urls_return)
+        return (failed_urls_return)
 
 
 all_books = []
