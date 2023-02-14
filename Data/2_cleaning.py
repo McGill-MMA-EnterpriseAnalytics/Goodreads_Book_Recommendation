@@ -1,4 +1,4 @@
-# %% IMPORTS & INIT
+# IMPORTS & INIT
 import pandas as pd
 import numpy as np
 import os
@@ -47,6 +47,3 @@ user_books_clean = user_books_clean[['USERID', 'family_group']].dropna()
 users.to_csv(os.path.join(data_path, 'Data_Final', 'user_details.csv'))
 user_books_clean.to_csv(os.path.join(data_path, 'Data_Final', 'bookshelves.csv'))
 books_clean.to_csv(os.path.join(data_path, 'Data_Final', 'all_books.csv'))
-
-
-# %%
