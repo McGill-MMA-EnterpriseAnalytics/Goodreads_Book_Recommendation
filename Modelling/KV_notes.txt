@@ -1,0 +1,7 @@
+1) EDA
+    i) there appears to be some weird stuff with merging 
+        df_books_tmp - less rows (as expected)
+        df_tmp - more rows than df_book_tmp (weird)
+2a) Data Transformation
+    i) why not also replace na for authors?
+    
