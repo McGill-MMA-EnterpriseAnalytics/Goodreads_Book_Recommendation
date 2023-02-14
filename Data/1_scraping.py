@@ -138,18 +138,17 @@ user_countries = ['?country=CA', '?country=all', '?country=US', '?country=US', '
                   '?country=SG', '?country=GB', '?country=DO', '?country=TT',
                   '?country=MT', '?country=BB', '?country=LC', '?country=GY']
 user_time_frame = ['&duration=w', '&duration=m', '&duration=y', '&duration=a']
-
 user_list_tasks = itertools.product(*[user_types, user_countries, user_time_frame])
+
 user_list = []
-init_failed = 0
+failed = 0
 while True:
     user_list_data, user_list_fail = asyncio.run(async_downloader(get_user_list, user_list_tasks))
     user_list.extend(user_list_data)
 
-    failed = len(user_list_fail)
-    if failed == init_failed:
+    if len(user_list_fail) == failed:
         break
-    init_failed = failed
+    failed = len(user_list_fail)
 user_list = list(set(user_list))
 
 
