@@ -4,6 +4,7 @@ import tqdm.asyncio
 from bs4 import BeautifulSoup
 import re
 import numpy as np
+import json
 
 
 async def async_downloader(parser_function: function,  task_list: list) -> tuple(list, list):
@@ -83,6 +84,7 @@ def get_user_list(soup, task_data):
     
 
 def get_user_detail(soup, task_data):
+    results = []
     details = soup.find("div", class_="infoBoxRowItem").text.split(',')
     age = ""
     gender = ""
@@ -93,10 +95,12 @@ def get_user_detail(soup, task_data):
         if 'Female' in i or 'Male' in i:
             gender = i.strip()
     
-    results = [task_data[1], age, gender]
+        results.append(task_data[1], age, gender)
+    return(results)
     
 
 def get_page_details(soup, task_data): 
+    results = []
     review_pages = int(soup.find(id='reviewPagination').find_all("a")[-2].text)
     if review_pages > 5:
         check_pages = np.random.choice(review_pages, replace=False, size=5)
@@ -105,5 +109,82 @@ def get_page_details(soup, task_data):
 
     new_urls = []
     for p in check_pages:
-                new_urls.append((f"https://www.goodreads.com/review/list/{task}?page={p+1}",task))
-            results.extend(new_urls)
+        new_urls.append((f"https://www.goodreads.com/review/list/{task_data[1]}?page={p+1}",task_data[1]))
+    results.extend(new_urls)
+    return(results)
+    
+    
+def get_book_page_details(soup, task_data):
+    results = []
+    user_read = []
+    books = soup.find(id='booksBody')
+    books = books.find_all('tr')
+    for b in books: 
+        book_link = b.find('a',href = True)['href']
+        user_read.append((book_link,task_data[1]))
+    results.extend(user_read)
+    return(results)
+
+    
+def book_information(soup, task_data):
+    results = []
+    book_info = []
+
+    # Find book information
+    award = []
+    isbn = []
+
+    
+    pages_divs = soup.find_all("p", {"data-testid": "pagesFormat"})
+    book_pages = pages_divs[0].text
+            
+    num_of_rating_divs = soup.find_all("span", {"data-testid": "ratingsCount"})
+    num_of_rating = re.findall(r'\d+',num_of_rating_divs[0].text)[0]
+            
+            
+    num_of_review_divs = soup.find_all("span", {"data-testid": "reviewsCount"})
+    num_of_review = re.findall(r'\d+',num_of_review_divs[0].text)[0]
+            
+
+    genre_divs = soup.find_all("a", {"class": "Button Button--tag-inline Button--small"})
+    genre = genre_divs[1].text
+
+
+    publish_divs = soup.find_all("p", {"data-testid":"publicationInfo"})
+    publish = publish_divs[0].text
+
+    author_divs = soup.find_all("span",{"class":"ContributorLink__name"})
+    author = author_divs[0].text
+
+    title_divs = soup.find_all("h1", {"class": "Text Text__title1"})
+    title = title_divs[0].text
+
+    rating_divs = soup.find_all("div", {"class": "RatingStatistics__rating"})
+    rating = rating_divs[0].text
+
+
+    json_str = soup.find_all("script",{'type':'application/ld+json'})[0].string
+    data = json.loads(json_str)
+
+    if 'awards' in data.keys():
+        award.append(1)
+    else :
+        award.append(0)
+
+    if 'isbn' in data.keys():
+        isbn.append(data.get("isbn"))
+    else :
+        isbn.append('NA')
+
+    description_divs = soup.find_all("span", {"class": "Formatted"})
+    try:
+        description = description_divs[0].text
+    except IndexError:
+        description = "Nil"
+            
+    book_info.append((task_data[0], book_pages, num_of_rating, num_of_review,
+                        genre, publish, author, title, rating, 
+                        award, isbn))
+    results.extend(book_info)
+    
+    
