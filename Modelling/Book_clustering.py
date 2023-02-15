@@ -5,12 +5,13 @@ from yellowbrick.cluster import KElbowVisualizer
 from sklearn.impute import IterativeImputer
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 from pandas.plotting import scatter_matrix
 from pathlib import Path
 import matplotlib.pyplot as plts
 import os
 
-from sklearn.decomposition import PCAß
+from sklearn.decomposition import PCA
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.model_selection import GridSearchCV
 from sklearn.neural_network import MLPRegressor
@@ -35,6 +36,8 @@ os.chdir(dir)
 
 
 # %% ### 1) Data Transformation
+
+# join the books and users information to get book counts
 df_users = pd.read_csv("../Data/Data_Final/user_details.csv")
 df_book_users = pd.read_csv("../Data/Data_Final/bookshelves.csv")
 df_books = pd.read_csv("../Data/Data_Final/all_books.csv")
@@ -49,6 +52,7 @@ df = pd.merge(df_books, book_counts, left_on="book_id", right_index=True, how="l
 df['isbn'] = df['isbn'].astype(str)
 
 # Description
+# do some preliminary data exploration
 df.info()
 df.describe()
 df.isnull().sum()
