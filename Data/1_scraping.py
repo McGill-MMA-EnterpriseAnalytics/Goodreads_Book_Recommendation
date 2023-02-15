@@ -1,4 +1,4 @@
-# %% ### IMPORTS
+### IMPORTS
 from functions import (async_downloader,
                        get_user_list,
                        get_user_detail,
@@ -12,7 +12,8 @@ import nest_asyncio
 nest_asyncio.apply()
 
 
-# %% ### USERS
+
+### USERS
 user_types = ['https://www.goodreads.com/user/best_reviewers',
               'https://www.goodreads.com/user/top_reviewers',
               'https://www.goodreads.com/user/top_readers']
@@ -41,7 +42,8 @@ user_list = pd.DataFrame(results).drop_duplicates(0).rename(columns={0: 'user_id
 user_list.to_csv('Data/Data_Intermediary/user_list.csv')
 
 
-# %% ### USER DETAILS
+
+### USER DETAILS
 task_list = []
 for itm in user_list['user_id'].tolist():
     task_list.append((f"https://www.goodreads.com/user/show/{itm}", itm))
@@ -61,7 +63,8 @@ user_details = pd.DataFrame(results).rename(columns={0: 'user_id', 1: 'age', 2: 
 user_details.to_csv('Data/Data_Intermediary/user_details.csv')
 
 
-# %% ### USER REVIEW PAGES
+
+### USER REVIEW PAGES
 task_list = []
 for itm in user_list['user_id'].tolist():
     task_list.append((f"https://www.goodreads.com/review/list/{itm}", itm))
@@ -80,7 +83,8 @@ print()
 user_review_pages = pd.DataFrame(results).rename(columns={0: 'page_link', 1: 'user_id'})
 
 
-# %% ### USER READ HISTORY
+
+### USER READ HISTORY
 task_list = []
 for itm in user_review_pages.iterrows():
     task_list.append((itm[1][0],itm[1][1]))
@@ -100,7 +104,8 @@ user_read_history = pd.DataFrame(results).rename(columns={0: 'book_link', 1: 'us
 user_read_history.to_csv('Data/Data_Intermediary/bookshelves.csv')
 
 
-# %% ### BOOK DATA
+
+### BOOK DATA
 task_list = []
 for itm in user_read_history.book_link.drop_duplicates().tolist():
     task_list.append((f"https://www.goodreads.com{itm}",))
@@ -121,6 +126,3 @@ book_data.columns = ['url','book_pages','num_of_rating','num_of_review',
                      'genre','publish','author','title','description',
                      'rating','award','isbn']
 book_data.to_csv('Data/Data_Intermediary/all_books.csv')
-
-
-# %%
