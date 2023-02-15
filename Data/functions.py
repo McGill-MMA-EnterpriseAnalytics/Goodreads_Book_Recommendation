@@ -80,8 +80,9 @@ async def async_downloader(parser_function: function,  task_list: list) -> tuple
         failed_task_data = []
         for tid in range(len(task_res)):
             if task_res[tid][0] == False:
-                successful_task_data.append(task_res[tid][1])
+                failed_task_data.append(task_res[tid][1])
 
+        # print(task_res)
         return (successful_task_data, failed_task_data)
 
 
@@ -103,9 +104,9 @@ async def page_downloader(session, task_data, parser_function):
             page = await response.text()
             soup = BeautifulSoup(page, 'html.parser')
             results = parser_function(soup, task_data)
-            return (True, results)
+            return ((True, results))
     except Exception as e:
-        return (False, task_data)
+        return ((False, task_data))
 
 
 # GET USER IDS AND COUNTRIES
@@ -133,11 +134,10 @@ def get_user_detail(soup, task_data):
             gender = i.strip()
 
     results.append((task_data[1], age, gender))
-    print(results)
     return (results)
 
 
-def get_page_details(soup, task_data):
+def get_user_review_pages(soup, task_data):
     results = []
     review_pages = int(soup.find(id='reviewPagination').find_all("a")[-2].text)
     if review_pages > 5:
@@ -152,7 +152,7 @@ def get_page_details(soup, task_data):
     return (results)
 
 
-def get_book_page_details(soup, task_data):
+def get_user_read_books(soup, task_data):
     results = []
     user_read = []
     books = soup.find(id='booksBody')
@@ -164,7 +164,7 @@ def get_book_page_details(soup, task_data):
     return (results)
 
 
-def book_information(soup, task_data):
+def get_book_information(soup, task_data):
     results = []
     book_info = []
 
@@ -174,6 +174,12 @@ def book_information(soup, task_data):
 
     pages_divs = soup.find_all("p", {"data-testid": "pagesFormat"})
     book_pages = pages_divs[0].text
+    
+    description_divs = soup.find_all("div", {"data-testid": "description"})
+    try:
+        description = description_divs[0].text
+    except IndexError:
+        description = "Nil"
 
     num_of_rating_divs = soup.find_all("span", {"data-testid": "ratingsCount"})
     num_of_rating = re.findall(r'\d+', num_of_rating_divs[0].text)[0]
@@ -209,13 +215,10 @@ def book_information(soup, task_data):
     else:
         isbn.append('NA')
 
-    description_divs = soup.find_all("span", {"class": "Formatted"})
-    try:
-        description = description_divs[0].text
-    except IndexError:
-        description = "Nil"
 
-    book_info.append((task_data[0], book_pages, num_of_rating, num_of_review,
-                      genre, publish, author, title, rating,
-                      award, isbn))
-    results.extend(book_info)
+
+    book_info.append([task_data[0], book_pages, num_of_rating, num_of_review,
+                      genre, publish, author, title, description, rating,
+                      award, isbn])
+    # results.append(book_info)
+    return(book_info)
