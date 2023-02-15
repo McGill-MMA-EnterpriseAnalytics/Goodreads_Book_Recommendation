@@ -11,3 +11,4 @@ bs4
 asyncio
 aiohttp
 nest_asyncio
+yellowbrick
