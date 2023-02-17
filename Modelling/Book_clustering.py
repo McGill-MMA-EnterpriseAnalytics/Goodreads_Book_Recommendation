@@ -7,29 +7,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 from pandas.plotting import scatter_matrix
 from pathlib import Path
-import matplotlib.pyplot as plts
 import os
 
 from sklearn.decomposition import PCA
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
-from sklearn.model_selection import GridSearchCV
-from sklearn.neural_network import MLPRegressor
 from sklearn.preprocessing import OneHotEncoder, StandardScaler, PowerTransformer, MinMaxScaler
 from sklearn.impute import SimpleImputer
-from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.utils.validation import check_array, check_is_fitted
 from sklearn.cluster import KMeans
 from sklearn.model_selection import train_test_split
-from sklearn import set_config
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
-from sklearn.model_selection import cross_val_score
-from sklearn.linear_model import LinearRegression, Ridge, Lasso
-from sklearn.ensemble import IsolationForest, GradientBoostingRegressor, RandomForestRegressor, AdaBoostRegressor
-from sklearn.metrics import mean_squared_error, silhouette_score
-from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
-from sklearn.decomposition import TruncatedSVD
 
 dir = os.getcwd()
 os.chdir(dir)
@@ -38,32 +26,42 @@ os.chdir(dir)
 # %% ### 1) Data Transformation
 
 # join the books and users information to get book counts
-df_users = pd.read_csv("../Data/Data_Final/user_details.csv")
-df_book_users = pd.read_csv("../Data/Data_Final/bookshelves.csv")
-df_books = pd.read_csv("../Data/Data_Final/all_books.csv")
+# df_users = pd.read_csv("../Data/Data_Final/user_details.csv")
+# df_book_users = pd.read_csv("../Data/Data_Final/bookshelves.csv")
+# df_books = pd.read_csv("../Data/Data_Final/all_books.csv")
 
-df_books_tmp = pd.merge(df_books, df_book_users, left_on="book_id", right_on="BOOKID", how="inner")  # no missing books to users
-df_tmp = pd.merge(df_books_tmp, df_users, on="USERID", how="inner")  # some books have not been read by users
+# df_books_tmp = pd.merge(df_books, df_book_users, left_on="book_id", right_on="BOOKID", how="inner")  # no missing books to users
+# df_tmp = pd.merge(df_books_tmp, df_users, on="USERID", how="inner")  # some books have not been read by users
 
-book_counts = df_tmp.groupby("BOOKID").size()
-book_counts.name = "Book_Counts"
+# book_counts = df_tmp.groupby("BOOKID").size()
+# book_counts.name = "Book_Counts"
 
-df = pd.merge(df_books, book_counts, left_on="book_id", right_index=True, how="left")
+# df = pd.merge(df_books, book_counts, left_on="book_id", right_index=True, how="left")
+df = pd.read_csv("../Data/Data_Final/all_books.csv")
 df['isbn'] = df['isbn'].astype(str)
 
 # Description
 # do some preliminary data exploration
+
+# %%
 df.info()
+
+# %%
 df.describe()
+
+# %%
 df.isnull().sum()
+
+# %%
 (df.isnull().sum() / df.shape[0]) * 100
+
+# %%
 df.corr()
+
+# %%
 scatter_matrix(df)
 
-
 # %% ### 2a) Data Transformation
-# missing book counts means that no user has read the book
-df['Book_Counts'] = df['Book_Counts'].replace({np.nan: 0})
 
 # remove unique identifiers/unnecessary column
 df = df.dropna(how="any")
@@ -130,7 +128,7 @@ pow_num_pipeline = Pipeline([
 num_attrs = ['rating']
 min_max_attrs = ['genre_freq', 'author_freq', 'year']
 one_cat_attrs = ['award', 'page_missing']
-pow_num_attrs = ['num_of_rating', 'num_of_review', 'pages', 'Book_Counts']
+pow_num_attrs = ['num_of_rating', 'num_of_review', 'pages']
 
 preprocessing = ColumnTransformer([
     ("num", num_pipeline, num_attrs),
@@ -142,33 +140,17 @@ preprocessing = ColumnTransformer([
 # run pipeline on training and testing data
 df_prepared = preprocessing.fit_transform(df)
 
-df_prep = pd.DataFrame(
+df_prep_out = pd.DataFrame(
     df_prepared,
     columns=preprocessing.get_feature_names_out(),
     index=df.index)
 
-df_prep.head()
-df_prep.columns = ['rating', 'genre_freq', 'author_freq', 'year', 'award', 'num_ratings', 'num_reviews', 'num_pages', 'book_counts']
-df_prep.corr()
-
-# Outlier removal
-# isolation_forest = IsolationForest(random_state=42)
-# outlier_pred = isolation_forest.fit_predict(df_prep)
-# df_prep_out = df_prep.iloc[outlier_pred == 1]
-# df_store = df_store.iloc[outlier_pred == 1]
-df_prep_out = df_prep.drop(columns='book_counts')
+df_prep_out.head()
+df_prep_out.columns = ['rating', 'genre_freq', 'author_freq', 'year', 'award', 'num_ratings', 'num_reviews', 'num_pages']
+df_prep_out.corr()
 
 
 # %% ### 3) Model Testing
-
-# #### KMeans
-# inertia = []
-# for i in range(5, 20):
-#     km = KMeans(n_clusters=i, n_init=10, random_state=42)
-#     model = km.fit(df_prep_out)
-#     print(model.inertia_)
-#     inertia.append(model.inertia_)
-#     labels = model.labels_
 
 # visualize the KMeans data to determine number of cluster centers
 km = KMeans(n_init=10, random_state=42)
@@ -320,11 +302,6 @@ for user in user_list:
 
         choices = np.random.choice(df_books_sub['book_id'].to_numpy(), num_topics[key], p=df_books_sub['Book_Counts'].to_numpy(), replace=False)
         recommendations.extend(list(choices))
-        ###################################### give recommendations based on popularity in descending order ####################
-
-        # df_books_sub = df_books_sub.sort_values(by="Book_Counts", ascending=False).reset_index(drop=True)
-
-        # recommendations.extend(df_books_sub.loc[:num_topics[key]-1, "book_id"])
 
 
     idx = df_books[df_books['book_id'].isin(recommendations)].index
@@ -338,10 +315,13 @@ for user in user_list:
     test_read_books
 
     both = 0
+    overlap_users = []
     for bookA in book_recs['book_id']:
         for bookB in test_read_books['book_id']:
             if bookA == bookB:
                 both += 1
+                if user not in overlap_users:
+                    overlap_users.append(user)
 
     if both > 0:
         count +=1
