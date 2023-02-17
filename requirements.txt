@@ -12,3 +12,4 @@ asyncio
 aiohttp
 nest_asyncio
 yellowbrick
+openpyxl
